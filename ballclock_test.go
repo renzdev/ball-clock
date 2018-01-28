@@ -1,4 +1,4 @@
-package ballclock
+package main
 
 import (
 	"math/rand"
@@ -28,23 +28,20 @@ func TestBallClockTable(t *testing.T) {
 			t.Errorf("Simulation test failed for ballCount %d, timeLimit %d.\n", tt.ballCount, tt.timeLimit)
 			t.Errorf("Expected %t, %s\n", tt.result, tt.resultString)
 			t.Errorf("Got %t, %s\n", result, resultString)
-		} else {
-			t.Log(resultString)
 		}
-
 	}
 }
 
+// not a very useful general testing function, added for comparison of performance
+// results to spot edge cases etc. skip during short test
 func TestBallClockPerf(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping performance comparison tests in short mode")
+	}
 	for i := 27; i <= 127; i++ {
 		_, resultString := RunSim(i, 0)
 		t.Log(resultString)
 	}
-}
-
-func TestBallClockManual(t *testing.T) {
-	_, resultString := RunSim(123, 0)
-	t.Log(resultString)
 }
 
 func BenchmarkBallClock(b *testing.B) {

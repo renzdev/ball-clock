@@ -1,10 +1,21 @@
-package ballclock
+package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"time"
 )
+
+func main() {
+	ballPtr := flag.Int("balls", 0, "ball count for simulation")
+	limitPtr := flag.Int("limit", 0, "(optional) time limit for simulation specified in minutes")
+	flag.Parse()
+
+	// no real use for function return values here since RunSim outputs the results to console already
+	// probably an indication of some output redundancy that could be cleaned up
+	RunSim(*ballPtr, *limitPtr)
+}
 
 const ballMin = 27
 const ballMax = 127
@@ -71,6 +82,9 @@ func RunSim(ballCount, timeLimit int) (bool, string) {
 			// Since we know that the initial balls were generated with values
 			// in ascending order, test comparison loop for Main[i] < Main[i+1]
 			// rather than taking up extra space for storage of original data
+
+			// Note: 	Testing shows significant performance drops for
+			//			95, 113, 119, 123, 126 with this algorithm
 			if minutesElapsed > 0 && minutesElapsed%60 == 0 {
 				for i := 0; i < len(bc.Main)-1; i++ {
 					if bc.Main[i] >= bc.Main[i+1] {
