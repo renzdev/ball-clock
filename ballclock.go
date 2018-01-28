@@ -23,6 +23,13 @@ func RunSim(ballCount, timeLimit int) (bool, string) {
 		return false, result
 	}
 
+	// this case wasn't explicitly stated in specification but seems safe to avoid it
+	if timeLimit < 0 {
+		result := "Error - invalid timeLimit specified for simulation"
+		fmt.Println(result)
+		return false, result
+	}
+
 	// init ballClock fields
 	// considered going with more OO design to enapsulate init logic as
 	// a ballClock method but it didn't really seem like golang style?
@@ -57,10 +64,13 @@ func RunSim(ballCount, timeLimit int) (bool, string) {
 			// Mode 1 is checking for all balls returned to initial ordering
 			// This requires all balls to be returned to Main slice which only
 			// occurs on the hour. This means we only need to perform the
-			// expensive comparison loop once every 60 ticks. There are
-			// undoubtedly other clever ways to reduce this even further.
+			// expensive comparison loop once every 60 ticks. In my testing this
+			// is by far the worst bottleneck in the problem and there are
+			// undoubtly more clever tricks that could make it even faster.
+
 			// Since we know that the initial balls were generated with values
 			// in ascending order, test comparison loop for Main[i] < Main[i+1]
+			// rather than taking up extra space for storage of original data
 			if minutesElapsed > 0 && minutesElapsed%60 == 0 {
 				for i := 0; i < len(bc.Main)-1; i++ {
 					if bc.Main[i] >= bc.Main[i+1] {
