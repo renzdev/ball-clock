@@ -6,10 +6,6 @@ import (
 	"time"
 )
 
-// feels kinda weird that these ballClock
-// constraint vars are just hanging out as
-// package constants but I couldn't come up
-// with a more appropriate context for them?
 const ballMin = 27
 const ballMax = 127
 const minuteSize = 4
@@ -63,10 +59,8 @@ func RunSim(ballCount, timeLimit int) (bool, string) {
 			// occurs on the hour. This means we only need to perform the
 			// expensive comparison loop once every 60 ticks. There are
 			// undoubtedly other clever ways to reduce this even further.
-
-			// Also made a slight optimization for comparison: since we know
-			// that the initial balls were generated with values in ascending
-			// order, we run a fast comparison loop for Main[i] < Main[i+1]
+			// Since we know that the initial balls were generated with values
+			// in ascending order, test comparison loop for Main[i] < Main[i+1]
 			if minutesElapsed > 0 && minutesElapsed%60 == 0 {
 				for i := 0; i < len(bc.Main)-1; i++ {
 					if bc.Main[i] >= bc.Main[i+1] {

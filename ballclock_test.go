@@ -1,6 +1,7 @@
 package ballclock
 
 import (
+	"math/rand"
 	"testing"
 )
 
@@ -24,7 +25,7 @@ func TestBallClockTable(t *testing.T) {
 		result, resultString := RunSim(tt.ballCount, tt.timeLimit)
 		if result != tt.result || resultString != tt.resultString {
 			t.Errorf("Simulation test failed for ballCount %d, timeLimit %d.\n", tt.ballCount, tt.timeLimit)
-			t.Errorf("Expected %t %s\n", tt.result, tt.resultString)
+			t.Errorf("Expected %t, %s\n", tt.result, tt.resultString)
 			t.Errorf("Got %t, %s\n", result, resultString)
 		} else {
 			t.Log(resultString)
@@ -43,4 +44,11 @@ func TestBallClockPerf(t *testing.T) {
 func TestBallClockManual(t *testing.T) {
 	_, resultString := RunSim(30, 325)
 	t.Log(resultString)
+}
+
+func BenchmarkBallClock(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_, resultString := RunSim(rand.Intn(100)+27, 0)
+		b.Log(resultString)
+	}
 }
