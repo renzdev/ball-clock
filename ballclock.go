@@ -1,11 +1,3 @@
-// update loop where each iteration represents one ball / minute
-// loop operations:
-//
-// bottlenecks:	-checking for initial ball ordering on each loop
-//				but only needs to occur once every 60 minutes?
-//				give balls int val and check is only > comparison
-//				-moving balls between 'tracks'?
-
 package ballclock
 
 import (
@@ -14,50 +6,67 @@ import (
 	"time"
 )
 
-// using const here for convenience but for production code where we might want more
-// flexibility with simulation parameters it might be better to encapsulate
-// these vars in a config struct?
+// feels kinda weird that these ballClock
+// constraint vars are just hanging out as
+// package constants but I couldn't come up
+// with a more appropriate context for them?
 const ballMin = 27
 const ballMax = 127
 const minuteSize = 4
 const fMinuteSize = 11
 const hourSize = 11
 
-func RunSim(ballCount, minLimit int) bool {
-	if ballCount <= ballMin && ballCount >= ballMin {
+// RunSim runs a ballClock simulation according to completion requirements specified
+// by input parameters and returns a success/failure bool and result string to
+// facilitate (very) basic testing and benchmarking
+func RunSim(ballCount, timeLimit int) (bool, string) {
+	if ballCount < ballMin || ballCount > ballMax {
 		// we would handle errors more carefully in production code
-		fmt.Println("Error - no ballCount specified for simulation")
-		return false
+		result := "Error - invalid ballCount specified for simulation"
+		fmt.Println(result)
+		return false, result
 	}
 
-	// init clock
-	// could go further with OO design / ctor / etc for clock struct?
+	// init ballClock fields
+	// considered going with more OO design to enapsulate init logic as
+	// a ballClock method but it didn't really seem like golang style?
 	bc := new(ballClock)
-	bc.Min = make([]int, minuteSize)
-	bc.FiveMin = make([]int, fMinuteSize)
-	bc.Hour = make([]int, hourSize)
 	bc.Main = make([]int, ballCount)
 	for i := 0; i < len(bc.Main); i++ {
 		bc.Main[i] = i + 1
 	}
+	bc.Min = make([]int, 0, minuteSize)
+	bc.FiveMin = make([]int, 0, fMinuteSize)
+	bc.Hour = make([]int, 0, hourSize)
 
-	// configure simulation
-	// trying out anon functions rather than checking sim conditions repeatedly elsewhere
+	// configure simulation according to input parameters specifying mode
+	// using anon functions for completion condition / results reporting rather than
+	// checking conditionals for "mode" repeatedly in function body. this might not be
+	// considered good/safe golang style either, will need to study with more time
 	var isComplete func() bool
-	var reportResults func()
+	var reportResults func() string
 	var minutesElapsed int
 	fmt.Print("BallClock simulation configured")
-	if minLimit > 0 {
+	if timeLimit > 0 {
 		fmt.Print(" for Mode 2 (Clock State)\n")
 		isComplete = func() bool {
-			return minutesElapsed == minLimit
+			return minutesElapsed == timeLimit
 		}
-		reportResults = func() {
-			fmt.Println(bc)
+		reportResults = func() string {
+			return bc.String()
 		}
 	} else {
 		fmt.Print(" for Mode 1 (Cycle Days)\n")
 		isComplete = func() bool {
+			// Mode 1 is checking for all balls returned to initial ordering
+			// This requires all balls to be returned to Main slice which only
+			// occurs on the hour. This means we only need to perform the
+			// expensive comparison loop once every 60 ticks. There are
+			// undoubtedly other clever ways to reduce this even further.
+
+			// Also made a slight optimization for comparison: since we know
+			// that the initial balls were generated with values in ascending
+			// order, we run a fast comparison loop for Main[i] < Main[i+1]
 			if minutesElapsed > 0 && minutesElapsed%60 == 0 {
 				for i := 0; i < len(bc.Main)-1; i++ {
 					if bc.Main[i] >= bc.Main[i+1] {
@@ -69,33 +78,72 @@ func RunSim(ballCount, minLimit int) bool {
 			}
 			return false
 		}
-		reportResults = func() {
-			fmt.Printf("%d balls cycle after %d days.\n", ballCount, minutesElapsed*60/24)
+		reportResults = func() string {
+			return fmt.Sprintf("%d balls cycle after %d days.", ballCount, minutesElapsed/60/24)
 		}
 	}
 
+	// run simulation and report/return results
 	startTime := time.Now()
-
 	for !isComplete() {
 		bc.Tick()
 		minutesElapsed++
 	}
-
 	simDuration := time.Since(startTime).Seconds()
-	reportResults()
-	fmt.Printf("Completed in %d milliseconds (%f.3 seconds)", int(simDuration*1000), simDuration)
-	return true
+
+	result := reportResults()
+	fmt.Println(result)
+	fmt.Printf("Completed in %d milliseconds (%f.3 seconds)\n", int(simDuration*1000), simDuration)
+	return true, result
 }
 
 type ballClock struct {
-	Main    []int
 	Min     []int
 	FiveMin []int
 	Hour    []int
+	Main    []int
 }
 
 func (bc *ballClock) Tick() {
+	// pop front ball from the slice "queue"
+	var newBall int
+	newBall, bc.Main = bc.Main[0], bc.Main[1:]
 
+	// minute track
+	if len(bc.Min) < minuteSize {
+		bc.Min = append(bc.Min, newBall)
+		return
+	}
+
+	for i := minuteSize - 1; i >= 0; i-- {
+		bc.Main = append(bc.Main, bc.Min[i])
+	}
+	bc.Min = make([]int, 0, minuteSize)
+
+	// five minute track
+	if len(bc.FiveMin) < fMinuteSize {
+		bc.FiveMin = append(bc.FiveMin, newBall)
+		return
+	}
+
+	for i := fMinuteSize - 1; i >= 0; i-- {
+		bc.Main = append(bc.Main, bc.FiveMin[i])
+	}
+	bc.FiveMin = make([]int, 0, fMinuteSize)
+
+	// hour track
+	if len(bc.Hour) < hourSize {
+		bc.Hour = append(bc.Hour, newBall)
+		return
+	}
+
+	for i := hourSize - 1; i >= 0; i-- {
+		bc.Main = append(bc.Main, bc.Hour[i])
+	}
+	bc.Hour = make([]int, 0, hourSize)
+
+	// return home little explorer ball
+	bc.Main = append(bc.Main, newBall)
 }
 
 func (bc *ballClock) String() string {
